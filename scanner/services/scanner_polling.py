@@ -1,6 +1,7 @@
 import time
 import sys
 import traceback
+from http.client import CannotSendRequest
 
 from scanner.services.scanner import Scanner
 from blockchain_common.wrapper_network import WrapperNetwork
@@ -22,7 +23,12 @@ class ScannerPolling(Scanner):
         self.next_block_number = self.last_block_persister.get_last_block()
         print('hello from {}'.format(self.network.type), flush=True)
         while True:
-            self.polling()
+            try:
+                self.polling()
+            except (ConnectionAbortedError, CannotSendRequest) as e:
+                # Catch thos error cause BTCProxy doesn't reload self and has short lifetime
+                self.network.__init__(self.network.type)
+                self.polling()
 
     def polling(self):
         try:
